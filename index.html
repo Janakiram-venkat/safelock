@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Safe Lock 3D</title>
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #f3f4f6; font-family: system-ui, sans-serif; }
+      #app { position: fixed; inset: 0; }
+      #app canvas { display: block; }
+      .phone {
+        position: fixed; left: 16px; bottom: 16px; width: 390px; height: 844px; z-index: 5;
+        transform-origin: bottom left; transform: scale(min(1, calc((100vh - 32px) / 868px)));
+        border: 12px solid #15171a; border-radius: 52px; overflow: hidden; background: #eceef0;
+        box-shadow: 0 0 0 1px #3a3f44, 0 24px 60px rgba(0, 0, 0, 0.35);
+      }
+      .phone[hidden] { display: none; }
+      .phone iframe { width: 100%; height: 100%; border: 0; display: block; }
+      @media (max-width: 700px) { .phone { left: 0; bottom: 0; width: 100vw; height: 100vh; border: 0; border-radius: 0; transform: none; } }
+      .sensor-label {
+        font: 600 11px/1.2 system-ui, sans-serif; color: #fff; background: rgba(17, 24, 39, 0.82);
+        padding: 3px 7px; border-radius: 4px; white-space: nowrap; pointer-events: none;
+        border-left: 3px solid var(--accent, #22d3ee);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

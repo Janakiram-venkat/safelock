@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#2e3338" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..700&display=swap" rel="stylesheet" />
+    <title>Safe Lock</title>
+  </head>
+  <body>
+    <main class="app" aria-live="off">
+      <header class="bar">
+        <h1>Safe Lock</h1>
+        <p class="link" id="link"><span class="link-dot" aria-hidden="true"></span><span id="linkText">Connecting to the vault</span></p>
+      </header>
+
+      <section class="vault" id="vault" aria-label="Vault status" data-lock="locked" data-glass="transparent" data-security="idle" data-door="closed">
+        <div class="vault-frame">
+          <div class="vault-glass">
+            <div class="vault-interior" aria-hidden="true"><span class="shelf"></span></div>
+            <div class="vault-status">
+              <p class="lock-word" id="lockWord">Locked</p>
+              <p class="door-line" id="doorLine">Door closed</p>
+            </div>
+          </div>
+          <div class="vault-rail" aria-hidden="true">
+            <span class="led" id="ledStatus"></span><span class="led" id="ledMode"></span><span class="led" id="ledNet"></span>
+            <span class="pad" id="ledPad"></span>
+          </div>
+        </div>
+      </section>
+
+      <div class="alert" id="alert" role="alert" hidden>
+        <div>
+          <p class="alert-title" id="alertTitle">Alert</p>
+          <p class="alert-body">The glass is private, the alarm is sounding and the camera is recording.</p>
+        </div>
+        <button class="btn btn-alert" id="clearAlert" type="button">Clear alert</button>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" id="lockBtn" type="button">Unlock</button>
+        <button class="btn btn-toggle" id="glassBtn" type="button" role="switch" aria-checked="false">
+          <span class="toggle-track" aria-hidden="true"><span class="toggle-knob"></span></span>
+          <span>Privacy glass</span>
+        </button>
+      </div>
+      <p class="hint" id="hint"></p>
+
+      <section class="block climate" aria-labelledby="climateTitle">
+        <h2 id="climateTitle">Climate</h2>
+        <div class="climate-figures">
+          <p class="temp"><span id="temp">--</span><span class="unit">°C</span></p>
+          <dl class="climate-side">
+            <div><dt>Humidity</dt><dd id="humidity">--</dd></div>
+            <div><dt>Target</dt><dd id="target">--</dd></div>
+          </dl>
+        </div>
+        <figure class="spark" id="spark">
+          <svg id="sparkSvg" role="img" aria-labelledby="sparkDesc" preserveAspectRatio="none"><title id="sparkDesc">Temperature over the last 10 minutes</title></svg>
+          <figcaption class="spark-readout" id="sparkReadout">Last 10 minutes</figcaption>
+        </figure>
+        <fieldset class="modes" id="modes">
+          <legend>Storage mode</legend>
+          <label><input type="radio" name="mode" value="cold" /><span>Cold</span></label>
+          <label><input type="radio" name="mode" value="normal" /><span>Normal</span></label>
+          <label><input type="radio" name="mode" value="warm" /><span>Warm</span></label>
+        </fieldset>
+      </section>
+
+      <section class="block" aria-labelledby="sensorsTitle">
+        <h2 id="sensorsTitle">Sensors</h2>
+        <dl class="sensors" id="sensors"></dl>
+      </section>
+
+      <section class="block" aria-labelledby="activityTitle">
+        <h2 id="activityTitle">Activity</h2>
+        <ol class="activity" id="activity"></ol>
+      </section>
+
+      <section class="block emergency">
+        <button class="btn btn-quiet" id="panic" type="button">Sound the alarm</button>
+        <p class="footnote" id="sourceNote">Readings are simulated until the vault's controller connects.</p>
+      </section>
+    </main>
+
+    <dialog class="sheet" id="pinSheet" aria-labelledby="pinTitle">
+      <form method="dialog" class="sheet-body" id="pinForm">
+        <p class="sheet-title" id="pinTitle">Enter your PIN to unlock</p>
+        <div class="pin-dots" id="pinDots" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        <input class="visually-hidden" id="pinInput" inputmode="numeric" autocomplete="one-time-code" maxlength="8" aria-label="PIN" />
+        <p class="pin-error" id="pinError" role="alert"></p>
+        <div class="keypad" id="keypad"></div>
+        <button class="btn btn-quiet sheet-cancel" value="cancel" type="submit">Cancel</button>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="/src/mobile/main.ts"></script>
+  </body>
+</html>

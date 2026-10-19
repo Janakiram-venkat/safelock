@@ -1,0 +1,9 @@
+{
+  "name": "Safe Lock",
+  "short_name": "Safe Lock",
+  "start_url": "/mobile.html",
+  "display": "standalone",
+  "background_color": "#eceef0",
+  "theme_color": "#2e3338",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
