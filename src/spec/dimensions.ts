@@ -272,6 +272,8 @@ export const spec = {
     doorOpen: ph(1400, "ms"),
     doorClose: ph(1200, "ms"),
     alertPulsePeriod: ph(500, "ms"),
+    demoStep: ph(9000, "ms", "demo scenario auto-play dwell per step"),
+    cameraFly: ph(1200, "ms", "camera move between demo views"),
   },
 
   optics: {

@@ -1,9 +1,10 @@
 import GUI from "lil-gui";
 import type { App } from "../app";
 import { PATENT_VIEWS } from "../features/patentViews";
+import type { DemoPanel } from "./demoPanel";
 
 /** lil-gui control panel. Every control writes through App so the URL stays in sync. */
-export function buildGui(app: App): GUI {
+export function buildGui(app: App, demo: DemoPanel | null = null): GUI {
   const gui = new GUI({ title: "Safe Lock" });
   const st = app.state;
   const proxy = {
@@ -20,6 +21,12 @@ export function buildGui(app: App): GUI {
     },
     rebuild: () => app.rebuild(),
   };
+
+  if (demo) {
+    const d = gui.addFolder("Demo scenarios");
+    d.add({ pick: () => demo.open() }, "pick").name("Choose a scenario…");
+    for (const sc of demo.scenarios) d.add({ [sc.id]: () => demo.start(sc.id) }, sc.id).name(sc.title);
+  }
 
   const door = gui.addFolder("Door & lock");
   door.add(proxy, "open").name("Open door");

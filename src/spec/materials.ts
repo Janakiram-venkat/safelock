@@ -78,6 +78,11 @@ export const materials = {
   overlay: { pir: "#22d3ee", camera: "#a78bfa", sensor: "#f59e0b", coneOpacity: 0.12 },
   shadowOpacity: 0.38,
   background: { hero: "#eef0f2", patent: "#ffffff" },
+  /** Demo captions: one accent per Surakshit Bharat pillar, and the tricolour rule on the card. */
+  demo: {
+    pillars: { road: "#d97706", mobility: "#0284c7", cyber: "#7c3aed", emergency: "#dc2626", disaster: "#15803d" },
+    flag: ["#ff9933", "#000080", "#138808"],
+  },
 } as const;
 
 export type Materials = typeof materials;

@@ -24,6 +24,9 @@ export interface ViewState {
   phone: boolean;
   /** Link to the device hub (live twin). URL `device=0` turns it off for reproducible renders. */
   device: boolean;
+  /** Demo scenario id ("" = none) and its 1-based step; see features/scenarios.ts. */
+  demo: string;
+  step: number;
   /** Fixed render size in px (still renders); 0 = fit the window. */
   width: number;
   height: number;
@@ -47,6 +50,8 @@ export const DEFAULTS: ViewState = {
   gui: true,
   phone: false,
   device: true,
+  demo: "",
+  step: 1,
   width: 0,
   height: 0,
 };
@@ -91,6 +96,9 @@ export function parseQuery(search: string, maxDoorAngle: number): ViewState {
   s.gui = bool(q.get("gui"), s.gui);
   s.phone = patent ? false : bool(q.get("phone"), s.phone);
   s.device = bool(q.get("device"), s.device);
+  const demo = q.get("demo");
+  if (!patent && demo && /^[a-z]+$/.test(demo)) s.demo = demo;
+  s.step = Math.max(1, Math.round(num(q.get("step"), 1)));
   s.width = Math.max(0, Math.round(num(q.get("w"), 0)));
   s.height = Math.max(0, Math.round(num(q.get("h"), s.width)));
   return s;
@@ -117,6 +125,10 @@ export function toQuery(s: ViewState, maxDoorAngle: number): string {
   if (!s.gui) q.set("gui", "0");
   if (s.phone) q.set("phone", "1");
   if (!s.device) q.set("device", "0");
+  if (s.demo) {
+    q.set("demo", s.demo);
+    if (s.step > 1) q.set("step", String(s.step));
+  }
   if (s.width) q.set("w", String(s.width));
   if (s.height && s.height !== s.width) q.set("h", String(s.height));
   const str = q.toString();

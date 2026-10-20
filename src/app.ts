@@ -19,6 +19,8 @@ import { Environment } from "./scene/environment";
 import { presentationCamera, heroDirection } from "./scene/cameras";
 import { PostProcessing } from "./scene/postprocessing";
 import { precompensate } from "./scene/toneMapCompensation";
+import { sineInOut } from "./features/easing";
+import type { DemoScene } from "./features/scenarios";
 import type { DeviceClient } from "./device/client";
 import type { DeviceState, PhysicalEvent } from "./device/protocol";
 
@@ -52,6 +54,12 @@ export class App {
   link: DeviceClient | null = null;
   private doorWasOpen = false;
   private phone: HTMLElement | null = null;
+  /** Camera move in progress (demo steps): orbit around the target, not a straight line. */
+  private fly: { from: THREE.Spherical; to: THREE.Spherical; fromTarget: THREE.Vector3; toTarget: THREE.Vector3; t: number } | null = null;
+  /** Screen height (px) kept clear at the bottom, e.g. by the demo caption. */
+  private reserveBottom = 0;
+  /** Called every frame with dt in ms (demo player). */
+  readonly tickers = new Set<(dt: number) => void>();
 
   constructor(private readonly container: HTMLElement, readonly spec: Spec, readonly state: ViewState) {
     const checks = validate(spec).filter((c) => !c.ok);
@@ -172,6 +180,39 @@ export class App {
     this.door.close();
   }
 
+  /**
+   * Move to a demo scenario scene. When linked, device-owned settings go to
+   * the device and physical events are injected; offline, they apply locally.
+   */
+  playScene(t: DemoScene, events: readonly PhysicalEvent[]): void {
+    const s = this.state;
+    if (s.patent) this.setPatent(false);
+    const reframe = s.view !== t.view || s.explode !== t.explode;
+    const glass = s.glass !== t.glass;
+    const security = s.security !== t.security;
+    const mode = s.mode !== t.mode;
+    s.view = t.view;
+    s.glass = t.glass;
+    s.security = t.security;
+    s.mode = t.mode;
+    s.tint = t.tint;
+    s.overlay = t.overlay;
+    s.explode = t.explode;
+    s.cutaway = t.cutaway;
+    s.phone = t.phone && this.linked;
+    if (this.linked) {
+      for (const e of events) this.simulate(e);
+      if (glass) this.deviceCommand("glass");
+      if (mode) this.deviceCommand("mode");
+      // A knock or tilt raises the alert itself, with its own reason in the log.
+      if (security && !(t.security === "alert" && events.length)) this.deviceCommand("security");
+    }
+    this.applyState();
+    if (t.door === "open" && this.door.target !== "open") this.openDoor();
+    if (t.door === "closed" && this.door.target !== "closed") this.closeDoor();
+    if (reframe) this.frame({ animate: true });
+  }
+
   setPatent(on: boolean): void {
     const s = this.state;
     s.patent = on;
@@ -209,7 +250,7 @@ export class App {
     this.overlay.setVisible(s.overlay);
     this.labels.domElement.style.display = s.overlay ? "" : "none";
     this.showPhone(s.phone && !s.patent && !s.width);
-    this.offsetForPhone();
+    this.offsetView();
     this.exploded.set(s.explode);
     this.cutaway.set(s.cutaway);
     applyDoor(this.vault, this.spec, this.door);
@@ -217,7 +258,7 @@ export class App {
     this.syncUrl();
   }
 
-  private syncUrl(): void {
+  syncUrl(): void {
     const s = this.state;
     if (typeof history !== "undefined" && !s.width) history.replaceState(null, "", `${location.pathname}${toQuery(s, this.door.maxAngle)}`);
   }
@@ -227,7 +268,7 @@ export class App {
   }
 
   /** Aim the camera for the current view; patent axis views use an orthographic camera. */
-  frame(): void {
+  frame(opts: { animate?: boolean } = {}): void {
     const s = this.state;
     const margin = this.spec.render.patentMargin.value;
     const aspect = this.aspect();
@@ -244,7 +285,25 @@ export class App {
     // Presentation views frame what is on screen now (open door, exploded parts);
     // patent views always use the assembled, closed bounds.
     const bounds = s.patent ? this.modelBounds : modelBox(this.vault.root);
-    const center = framePerspective(this.camera, bounds, dir, up, view === "hero" ? margin * 0.6 : margin);
+    const m = view === "hero" ? margin * 0.6 : margin;
+    if (opts.animate && !s.patent) {
+      const goal = this.camera.clone();
+      const toTarget = this.fit(goal, bounds, dir, up, m);
+      const fromTarget = this.controls.target.clone();
+      const from = new THREE.Spherical().setFromVector3(this.camera.position.clone().sub(fromTarget));
+      const to = new THREE.Spherical().setFromVector3(goal.position.clone().sub(toTarget));
+      // Take the short way round.
+      while (to.theta - from.theta > Math.PI) to.theta -= 2 * Math.PI;
+      while (from.theta - to.theta > Math.PI) to.theta += 2 * Math.PI;
+      this.fly = { from, to, fromTarget, toTarget, t: 0 };
+      this.camera.up.copy(up);
+      this.camera.near = Math.min(this.camera.near, goal.near);
+      this.camera.far = Math.max(this.camera.far, goal.far);
+      this.camera.updateProjectionMatrix();
+      return;
+    }
+    this.fly = null;
+    const center = this.fit(this.camera, bounds, dir, up, m);
     this.controls.target.copy(center);
     this.controls.update();
   }
@@ -277,7 +336,7 @@ export class App {
     this.labels.setSize(s.width ? css.width : cw, s.width ? css.height : ch);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
-    this.offsetForPhone();
+    this.offsetView();
     if (this.ortho) this.frame();
   }
 
@@ -316,7 +375,21 @@ export class App {
     applyDoor(this.vault, this.spec, this.door);
     applyGlass(this.vault.glass.material as THREE.MeshPhysicalMaterial, this.glass.value);
     this.device.apply(this.state, this.time, dt, this.door.bolt > 0);
+    for (const fn of this.tickers) fn(dt);
+    if (this.fly) this.stepFly(dt);
     if (this.controls.enabled) this.controls.update();
+  }
+
+  private stepFly(dt: number): void {
+    const f = this.fly!;
+    f.t = Math.min(f.t + dt / this.spec.timing.cameraFly.value, 1);
+    const k = sineInOut(f.t);
+    const lerp = (a: number, b: number) => a + (b - a) * k;
+    const sph = new THREE.Spherical(lerp(f.from.radius, f.to.radius), lerp(f.from.phi, f.to.phi), lerp(f.from.theta, f.to.theta));
+    this.controls.target.lerpVectors(f.fromTarget, f.toTarget, k);
+    this.camera.position.setFromSpherical(sph).add(this.controls.target);
+    this.camera.lookAt(this.controls.target);
+    if (f.t >= 1) this.fly = null;
   }
 
   private draw(): void {
@@ -327,12 +400,35 @@ export class App {
     if (this.state.overlay) this.labels.render(this.scene, cam);
   }
 
-  /** Keep the model centred in the space the phone frame leaves free (wide screens only). */
-  private offsetForPhone(): void {
+  /** Keep the bottom `px` of the screen clear of the model (demo caption). */
+  setReserveBottom(px: number): void {
+    if (px === this.reserveBottom) return;
+    this.reserveBottom = px;
+    this.offsetView();
+    if (!this.state.patent) this.frame({ animate: true });
+  }
+
+  /** Frame `cam` on the bounds, pulled back so the model fits above the reserved strip. */
+  private fit(cam: THREE.PerspectiveCamera, bounds: THREE.Box3, dir: THREE.Vector3, up: THREE.Vector3, margin: number): THREE.Vector3 {
+    const center = framePerspective(cam, bounds, dir, up, margin);
+    const h = this.container.clientHeight;
+    const free = h - Math.min(this.reserveBottom, h / 2);
+    if (free < h && !this.state.width) {
+      cam.position.sub(center).multiplyScalar(h / free).add(center);
+      cam.far *= h / free;
+      cam.updateProjectionMatrix();
+    }
+    return center;
+  }
+
+  /** Keep the model centred in the space the phone frame and demo caption leave free. */
+  private offsetView(): void {
     const w = this.container.clientWidth;
     const h = this.container.clientHeight;
     const phone = this.phone && !this.phone.hidden ? this.phone.getBoundingClientRect().width + 16 : 0;
-    if (phone && w > 900 && !this.state.width) this.camera.setViewOffset(w, h, -phone / 2, 0, w, h);
+    const x = phone && w > 900 ? -phone / 2 : 0;
+    const y = Math.min(this.reserveBottom, h / 2) / 2;
+    if ((x || y) && !this.state.width) this.camera.setViewOffset(w, h, x, y, w, h);
     else this.camera.clearViewOffset();
   }
 

@@ -30,9 +30,22 @@ npm run render:hero    # renders/hero/*.png (3000 × 2000)
 
 Every GUI control is mirrored in the URL, so any render can be reproduced:
 
-`view` (`hero` `front` `rear` `left` `right` `top` `bottom` `perspective`) · `glass` (`transparent` `opaque`) · `door` (`open` `closed` or degrees) · `state` (`idle` `alert`) · `mode` (`cold` `normal` `warm`) · `tint` · `overlay` · `explode` (0–1) · `cutaway` (0–1) · `patent` · `post` · `exposure` · `tonemap` (`agx` `aces`) · `hdri` · `gui` · `w`/`h` (fixed render size in px)
+`view` (`hero` `front` `rear` `left` `right` `top` `bottom` `perspective`) · `glass` (`transparent` `opaque`) · `door` (`open` `closed` or degrees) · `state` (`idle` `alert`) · `mode` (`cold` `normal` `warm`) · `tint` · `overlay` · `explode` (0–1) · `cutaway` (0–1) · `patent` · `post` · `exposure` · `tonemap` (`agx` `aces`) · `hdri` · `gui` · `demo` (scenario id) / `step` · `w`/`h` (fixed render size in px)
 
 Example: `?patent=1&view=top&glass=transparent`.
+
+## Demo scenarios (Surakshit Bharat)
+
+Click **Surakshit Bharat demos** (top left) or use *Demo scenarios* in the GUI. Each scenario is a sequence of narrated steps. Every step moves the camera, sets the door, glass, alert, storage mode, overlay, cutaway and exploded view, and sends sensor events to the simulated device. Each caption is tagged with the pillars it serves: road safety, smart mobility, cybersecurity, emergency response and disaster resilience. Anything the prototype does not do yet appears on a separate **Roadmap** line.
+
+| Scenario | id | Story |
+|---|---|---|
+| Golden hour: highway crash | `highway` | PIR wake-up → SOS alarm → remote unlock by the control room → restock logging → pod network |
+| Cyber-physical attack | `attack` | Loitering → prying (vibration) → tamper + power cut → tilt → PIN brute-force lockout → restore |
+| Disaster: power cut and earthquake | `disaster` | Cold-chain medicines → grid failure on battery → aftershock alarm → responder access → power back |
+| Inside the pod: sensor tour | `tour` | Exploded view and sensor overlay, mapped to the five pillars |
+
+Keys: **→** next, **←** back, **Space** auto-play, **Esc** close. Deep link to a step: `?demo=highway&step=3`. Scripts live in `src/features/scenarios.ts`. Their numbers come from `src/spec/device.ts`, and the auto-play dwell and camera move times come from `spec.timing`. With `npm run dev` the device hub runs too, so the phone app follows the story live.
 
 ## Assets
 
